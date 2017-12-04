@@ -8,8 +8,15 @@
             
 # CHANGES
 # Date	        Description
+# ------------  ---------------------------------------------------------------
 # 2008-05-18    Added uneven arm split randomly selected into first block
-# ==============================================================================
+# 2017-11-21    Rewrote script
+#                   - Replaced loop to create 0/1 matrix; can now handle
+#                     4+ clusters.
+#                   - Various improvements for readability
+# 2017-11-28    Added option to return a single allocation, selected at random,
+#               set as default.
+# =============================================================================
 
 determine_clusters <- function(arms, clusters) {
     # This determines the number of clusters, correctly handling an uneven split
@@ -55,7 +62,7 @@ create_binary_matrix <- function(arms, clusters, per_cluster, half = TRUE) {
     }
 }
 
-random_allocation <- function(covariates, clusters) {
+random_allocation <- function(covariates, clusters, pick_one = TRUE) {
     arms <- 2       # Fixed, for now.
 
     # Calculate the number of clusters per arm ================================
@@ -90,22 +97,36 @@ random_allocation <- function(covariates, clusters) {
     balance <- balance[order(balance[,"balance"]), ]
 
     # Decide how many rows to return ==============================================
-    max_n <- ifelse(clusters >  17, 1000,
-             ifelse(clusters >  11, 100,
-             ifelse(clusters == 11, 58,
-             ifelse(clusters == 10, 32,
-             ifelse(clusters == 9,  18,
-             ifelse(clusters <= 8,  nrow(balance)))))))
 
-    # Return balance data frame
-    return(balance[1:max_n, ])
+    # max_n <- ifelse(clusters >  17, 1000,
+    #          ifelse(clusters >  11, 100,
+    #          ifelse(clusters == 11, 58,
+    #          ifelse(clusters == 10, 32,
+    #          ifelse(clusters == 9,  18,
+    #          ifelse(clusters <= 8,  nrow(balance)))))))
+
+    # New method: return 1st quartile of nrow(balance)
+    max_n <- round(quantile(1:nrow(balance), c(0.10)))
+    best_imbalance <- balance[1:max_n, ]
+
+    # Pick a single allocation and random
+    selection <- sample(1:max_n, 1)
+
+    # Return single allocation (default) or entire table if requested
+    if (pick_one) {
+        return(best_imbalance[selection, ])
+    } else {
+        return(best_imbalance)
+    }
 }
 
 
-additional_allocation <- function(covariates, Z) {
+additional_allocation <- function(covariates, Z, clusters) {
+    arms <- 2 
+    
     block_size <- ncol(Z) - 1
 
-    # CHECK: What is this doing ===============================================
+    # CHECK: What is this doing? ===============================================
     one <- sum(data.frame(Z)[1, 1:ncol(data.frame(Z)) - 1])
     zero <-	ncol(data.frame(Z)) - 1 - one
     # =========================================================================
@@ -125,8 +146,11 @@ additional_allocation <- function(covariates, Z) {
 
     # Prepare covariates ======================================================
     
-    # Check that first column of covariates is string
+    # Check that first column of covariates is string [NOT NECCESSARY?]
     stopifnot(is.character(covariates[,1]) | is.factor(covariates[,1]))
+
+    # Check that we have enough covariates
+    stopifnot(nrow(covariates) >= arms * block_size)
 
     # Set rownames
     rownames(covariates) <- as.character(covariates[,1])
