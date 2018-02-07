@@ -28,11 +28,15 @@
 # =============================================================================
 
 determine_clusters <- function(arms, clusters) {
-    # This determines the number of clusters, correctly handling an uneven split
+    # This determines the number of clusters, correctly handling an 
+    # uneven split.
 
-    # First, check that arguments are whole numbers
+    # Check that arguments are whole numbers
     stopifnot(arms %% 1 == 0,
               clusters %% 1 == 0)
+
+    # Check that we have > 1 cluster
+    stopifnot(clusters > 1)
 
     # If so, calculate number of arms
     return(ifelse(clusters %% arms == 0,        # If number of clusters is 
@@ -41,9 +45,34 @@ determine_clusters <- function(arms, clusters) {
                   clusters / arms + sample(c(0.5, -0.5), 1)))
 }
 
+# determine_clusters <- function(arms, clusters, previous_allocation = NA) {
+#     # This determines the number of clusters, correctly handling an 
+#     # uneven split.
+
+#     # Check that arguments are whole numbers
+#     stopifnot(arms %% 1 == 0,
+#               clusters %% 1 == 0)
+
+#     # Check that we have > 1 cluster
+#     stopifnot(clusters > 1)
+
+#     # If so, calculate number of arms
+#     if (clusters %% arms == 0) {
+#         per_arm <- clusters / arms  
+#     } else {
+#         if (is.na(previous_allocation)) {
+#             per_arm <- clusters / arms + sample(c(0.5, -0.5), 1)
+#         } else if (balance_so_far(previous_allocation) < 0) {
+#             per_arm <- clusters / arms - 0.5
+#         } else {
+#             per_arm <- clusters / arms + 0.5
+#         }
+#     }
+# }
+
 create_letter_matrix <- function(arms, clusters, per_cluster, half = TRUE) {
     # stopifnot(clusters <= 24)
-    # # Create matrix with letters (one for each cluster) arranged into columns
+    # Create matrix with letters (one for each cluster) arranged into columns
     # (one for each arm)
     random <- t(combn(letters[1:clusters], per_cluster))
     if (half) {
@@ -64,13 +93,6 @@ create_binary_matrix <- function(arms, clusters, per_cluster) {
     selected_rows <- all_perm[rowSums(all_perm) == per_cluster,]
 
     return(selected_rows)
-
-    # if (half) {
-    #     # Return half the matrix
-    #     return(selected_rows[selected_rows[,1] == 1,])
-    # } else {
-    #     return(selected_rows)
-    # }
 }
 
 random_allocation <- function(covariates, clusters) {
@@ -94,20 +116,20 @@ random_allocation <- function(covariates, clusters) {
     # Select first n (clusters) for practice
     covariates <- data.frame(covariates[1:clusters, ])
 
-    # Remove cluster IDs ==========================================================
+    # Remove cluster IDs ======================================================
     covariates <- covariates[, -1]
 
-    # Calculate the standardized Z-scores =========================================
+    # Calculate the standardized Z-scores =====================================
     z <- data.frame(scale(covariates, center = TRUE, scale = TRUE))
 
-    # Calculate the balance statistic =============================================
+    # Calculate the balance statistic =========================================
     balance <- cbind(rand, apply((as.matrix(rand) %*% as.matrix(z))**2, 1, sum))
     colnames(balance) <- c(rownames(covariates), "balance")
 
-    #  Sort the data ==============================================================
+    #  Sort the data ==========================================================
     balance <- balance[order(balance[,"balance"]), ]
 
-    # Decide how many rows to return ==============================================
+    # Decide how many rows to return ==========================================
     n <- round(quantile(1:nrow(balance), c(0.10)))
 
     if (clusters == 4) {
@@ -120,10 +142,10 @@ random_allocation <- function(covariates, clusters) {
         allocation <- balance[sample(1:n, 1), ]
     }
 
-
     # Return the final allocation
     return(list(single_allocation = allocation,
-                all_allocations = balance))
+                all_allocations = balance,
+                site_size = clusters))
 }
 
 
@@ -134,13 +156,7 @@ additional_allocation <- function(covariates, Z, clusters) {
     # Check previous allocation ===============================================
 
     # Should have a single column labelled "balance"
-
     stopifnot("balance" %in% tolower(names(Z)))
-
-    # The number of (already allocated) clusters should be a multiple of the 
-    # number of clusters (for this allocation)
-
-    stopifnot((ncol(Z) - 1) %% clusters == 0)
 
     # Create required matrices ================================================
     per_cluster <- determine_clusters(arms, clusters)
@@ -222,7 +238,7 @@ additional_allocation <- function(covariates, Z, clusters) {
     colnames(result) <- c(rownames(covariates)[1:(ncol(Z) + clusters)],
                           "balance")
 
-    # Return results ==========================================================
+    # Derive final allocations ================================================
     allocation <- result[sample(1:round(quantile(1:nrow(second_allocat), 
                                           c(0.1))), 1),]
     return(list(single_allocation = allocation,
