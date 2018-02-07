@@ -27,6 +27,12 @@
 #               and the "single_allocation", selected at random.
 # =============================================================================
 
+balance_so_far <- function(previous_allocation) {
+    pa <- previous_allocation$single_allocation
+    split <- table(t(pa[, -ncol(pa)]))
+    return(split[[1]] - split[[2]])
+}
+
 determine_clusters <- function(arms, clusters) {
     # This determines the number of clusters, correctly handling an 
     # uneven split.
@@ -148,9 +154,13 @@ random_allocation <- function(covariates, clusters) {
                 site_size = clusters))
 }
 
-
-additional_allocation <- function(covariates, Z, clusters) {
+additional_allocation <- function(covariates, 
+                                  previous_allocation,
+                                  clusters,
+                                  fix_balance = FALSE,
+                                  verbose = TRUE) {
     arms <- 2 
+    Z <- previous_allocation$single_allocation
     size_of_existing_allocation <- ncol(Z) - 1
 
     # Check previous allocation ===============================================
@@ -160,21 +170,36 @@ additional_allocation <- function(covariates, Z, clusters) {
 
     # Create required matrices ================================================
     per_cluster <- determine_clusters(arms, clusters)
-    cat(paste0("\n", "Number of clusters per arm: ", per_cluster, "\n"))
+    if (verbose) {
+        cat(paste0("\n", 
+                   "Number of clusters per arm:                          ", 
+                   per_cluster, "\n"))
+    }
 
     random <- create_letter_matrix(arms, clusters, per_cluster) 
     rand <- create_binary_matrix(arms, clusters, per_cluster)
 
     # Prepare covariates ======================================================
-    cat("\n", paste0('Using variable "', 
-                     names(covariates)[1], 
-                     '" as cluster ID.'), '\n')
-    cat("\n", paste0('Balancing on the following variables: "', 
-                     paste(names(covariates)[-1], collapse = "\", \""), "\".\n"))
+    if (verbose) {
+        cat(paste0("Cluster ID variable:                                 ", 
+                   names(covariates)[1]))
+        cat(paste0("\n", 
+                   "Balancing on the following variables:                ", 
+                   paste(names(covariates)[-1], 
+                         collapse = ", "),
+                   "\n"))
+    }
 
     # Check that we have enough covariates
-    cat(paste0("Rows in covariates: ", nrow(covariates), "\n"))
-    cat(paste0("Size of existing allocation: ", size_of_existing_allocation, "\n"))
+    if (verbose) {
+        cat(paste0("Rows in covariates:                                  ", 
+                   nrow(covariates), "\n"))
+        cat(paste0("Number of clusters ALREADY allocated:                ", 
+                   size_of_existing_allocation, "\n"))
+        cat(paste0("Number of clusters in the CURRENT allocation         ", 
+                   clusters, "\n"))
+    }
+
     stopifnot(nrow(covariates) >= (size_of_existing_allocation + clusters))
 
     # Set rownames
@@ -241,6 +266,65 @@ additional_allocation <- function(covariates, Z, clusters) {
     # Derive final allocations ================================================
     allocation <- result[sample(1:round(quantile(1:nrow(second_allocat), 
                                           c(0.1))), 1),]
-    return(list(single_allocation = allocation,
-                all_allocations = result))
+    allocation <- list(single_allocation = allocation,
+                       all_allocations = result,
+                       site_size = c(previous_allocation$site_size, clusters))
+
+    # =========================== OPTIONAL ====================================
+
+    # We can optionally ensure that the sites are balanced across arms.
+
+    # If the previous allocation was balanced 50:50, then we make no changes to
+    # the allocation result. 
+    
+    # However, if the CURRENT allocation has become unbalanced, we will UPDATE
+    # (i.e. fix) the current allocation to ensure a 50:50 balance is achieved.
+    # We will do this by changing one of the clusters (chosen at random) to be
+    # '0' or '1', depending on the direction of the existing imbalance.
+
+    # By default this is disabled.
+
+    balanced <- allocation
+
+    if (balance_so_far(balanced) >= 1) {
+        if (verbose) { cat("We have too many 1s, so replace one of the 0s.\n") }
+
+        # Pick one 0 column at random
+        zeros <- which(balanced$single_allocation == 0)
+        chosen_zero <- sample(zeros, 1)
+        
+        # Replace chosen 0 in single allocation
+        balanced$single_allocation[chosen_zero] <- 1
+
+        # Replace chosen 0 in 'all_allocations' table
+        balanced$all_allocations[, chosen_zero] <- 1
+
+    } else if (balance_so_far(balanced) <= -1) {
+        if (verbose) { cat("We have too many 0s, so replace one of the 1s.\n") }
+
+        # Pick one 1 column at random
+        ones <- which(balanced$single_allocation == 1)
+        chosen_one <- sample(ones, 1)
+        
+        # Replace chosen 0 in single allocation
+        balanced$single_allocation[chosen_one] <- 0
+
+        # Replace chosen 0 in 'all_allocations' table
+        balanced$all_allocations[, chosen_one] <- 0
+    }
+
+    if (verbose) {
+        cat(paste0("\nArm imbalance across sites for PREVIOUS allocations: ", 
+                   balance_so_far(previous_allocation)))
+        cat(paste0("\nArm imbalance across sites for new allocation:       ", 
+                   balance_so_far(allocation), "\n"))
+    }
+
+    # ====================== RETURN FINAL ALLOCATIONS =========================
+
+    if (fix_balance) {
+        return(balanced)
+    } else {
+        return(allocation)
+    }
 }
