@@ -1,3 +1,4 @@
 .Rhistory
 *.swp
 *.swo
+/tests/block_one_allocation.csv
