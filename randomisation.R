@@ -102,6 +102,14 @@ create_binary_matrix <- function(arms, clusters, per_cluster) {
 }
 
 random_allocation <- function(covariates, clusters) {
+    # Check that 'covariates' is, or can be converted to, a data frame.
+    if (is.tibble(covariates)) {
+        covariates <- as.data.frame(covariates)
+    }
+
+    # Throw an error if covariates isn't a data frame
+    stopifnot(is.data.frame(covariates))
+
     arms <- 2       # Fixed, for now.
 
     # Calculate the number of clusters per arm ================================
@@ -159,6 +167,14 @@ additional_allocation <- function(covariates,
                                   clusters,
                                   fix_balance = FALSE,
                                   verbose = TRUE) {
+
+    # Check that 'covariates' is, or can be converted to, a data frame.
+    if (is.tibble(covariates)) {
+        covariates <- as.data.frame(covariates)
+    }
+
+    # Throw an error if covariates isn't a data frame
+    stopifnot(is.data.frame(covariates))
     arms <- 2 
     Z <- previous_allocation$single_allocation
     size_of_existing_allocation <- ncol(Z) - 1
