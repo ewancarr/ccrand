@@ -118,6 +118,14 @@ create_letter_matrix <- function(arms, clusters, per_cluster, half = TRUE) {
     }
 }
 
+convert_to_ab <- function(allo) {
+    ab <- allo[, !names(allo) %in% c("balance")]    # Remove balance column.
+    ab[ab == 0] <- "A"                              # Replace 0 with "A".
+    ab[ab == 1] <- "B"                              # Replace 1 with "B".
+    return(ab)
+}
+
+
 create_binary_matrix <- function(arms, clusters, per_cluster) {
     # Create matrix of all permutations
     all_perm <- expand.grid(rep(list(0:1), clusters)) 
@@ -184,8 +192,14 @@ random_allocation <- function(covariates, clusters) {
         allocation <- balance[sample(1:n, 1), ]
     }
 
+    # Create A/B version of final allocation===================================
+    # A = 0; B = 1.
+
+    ab <- convert_to_ab(allocation)
+
     # Return the final allocation
     return(list(single_allocation = allocation,
+                single_ab = ab,
                 all_allocations = balance,
                 site_size = clusters))
 }
@@ -311,6 +325,7 @@ additional_allocation <- function(covariates,
     allocation <- result[sample(1:round(quantile(1:nrow(second_allocat), 
                                           c(0.1))), 1),]
     allocation <- list(single_allocation = allocation,
+                       single_ab = convert_to_ab(allocation),
                        all_allocations = result,
                        site_size = c(previous_allocation$site_size, clusters))
 
