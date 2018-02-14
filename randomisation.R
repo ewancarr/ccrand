@@ -27,6 +27,59 @@
 #               and the "single_allocation", selected at random.
 # =============================================================================
 
+covariate_filename <- function(allo) {
+    paste0("covariates_allocation_", allo, ".xlsx")
+}
+
+generate_filename_datestamp <- function(allo) {
+    paste0("ODDESSI_",
+           format(Sys.time(), "%Y_%m_%d_%H%M%S"),
+           "_allocation_", allo, ".Rdata")
+}
+
+load_existing_allocation <- function(allo) {
+    # allo = CURRENT allocation (i.e. 1, 2, 3...)
+    # Previous allocations should be stored in a folder 
+    # "saved_allocations".
+
+    # Check we're not on the first allocation.
+    if (allo < 2) {
+        stop("Must be on second allocation (or higher).")
+    }
+
+    search_term <- paste0("^.*_allocation_", allo - 1, "\\.Rdata")
+
+    # Check the previous allocation is stored in correct folder.
+    if(!any(str_detect(dir(here("saved_allocations")), search_term))) {
+        stop("Previous allocation not found.")
+    }
+
+    # Check there is only one version of the previous allocation. 
+    matched_files <- str_match(dir(here("saved_allocations")), search_term)
+    matched_files <- matched_files[!is.na(matched_files)]
+    if (length(matched_files) > 1) {
+        stop(paste0("I found multiple versions of the previous allocation:\n\n",
+                    paste(matched_files, collapse = "\n"),
+                    "\n\nPlease resolve."))
+    }
+
+    # Load the previous allocation; check with user that correct file is loaded
+    ask_user <- menu(c("Yes", "No"),
+                     title = paste0("I found this file. ",
+                                    "Is this the correct previous allocation?",
+                                    "\n\n",
+                                    "    ", matched_files,
+                                    "\n"))
+    if (ask_user == 1) {
+        load(here("saved_allocations", matched_files), 
+             verbose = TRUE)
+    } else {
+        stop("Stopping, as requested.")
+    }
+}
+
+
+
 balance_so_far <- function(previous_allocation) {
     pa <- previous_allocation$single_allocation
     split <- table(t(pa[, -ncol(pa)]))
@@ -50,31 +103,6 @@ determine_clusters <- function(arms, clusters) {
                   clusters / arms,              
                   clusters / arms + sample(c(0.5, -0.5), 1)))
 }
-
-# determine_clusters <- function(arms, clusters, previous_allocation = NA) {
-#     # This determines the number of clusters, correctly handling an 
-#     # uneven split.
-
-#     # Check that arguments are whole numbers
-#     stopifnot(arms %% 1 == 0,
-#               clusters %% 1 == 0)
-
-#     # Check that we have > 1 cluster
-#     stopifnot(clusters > 1)
-
-#     # If so, calculate number of arms
-#     if (clusters %% arms == 0) {
-#         per_arm <- clusters / arms  
-#     } else {
-#         if (is.na(previous_allocation)) {
-#             per_arm <- clusters / arms + sample(c(0.5, -0.5), 1)
-#         } else if (balance_so_far(previous_allocation) < 0) {
-#             per_arm <- clusters / arms - 0.5
-#         } else {
-#             per_arm <- clusters / arms + 0.5
-#         }
-#     }
-# }
 
 create_letter_matrix <- function(arms, clusters, per_cluster, half = TRUE) {
     # stopifnot(clusters <= 24)
