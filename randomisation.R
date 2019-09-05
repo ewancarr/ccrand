@@ -1,10 +1,8 @@
 # ==============================================================================
 # Title:            This script calculates the balance statistic using the 
 #                   minimisation algorithm.
-# Author:           Ewan Carr
-# Started:          2017-11-17
-# Original author:  Ben Carter
-# Original date:    2007-12-04
+# Author:           Ewan Carr; 2017-11-17
+# Original author:  Ben Carter; 2007-12-04
             
 # CHANGES
 # Date	        Description
@@ -25,14 +23,23 @@
 #                     at random (i.e. two allocations with identical balance).
 #               Simplified options. Now returns a list with "all_allocations"
 #               and the "single_allocation", selected at random.
+# 2019-09-5     Tidy up before distribution on GitHub.
 # =============================================================================
+
+trialname <- "TRIAL"
+
+###############################################################################
+####                                                                      #####
+####                           Helper functions                           #####
+####                                                                      #####
+###############################################################################
 
 covariate_filename <- function(allo) {
     paste0("covariates_allocation_", allo, ".xlsx")
 }
 
 generate_filename_datestamp <- function(allo) {
-    paste0("ODDESSI_",
+    paste0(trialname, "_",
            format(Sys.time(), "%Y_%m_%d_%H%M%S"),
            "_allocation_", allo, ".Rdata")
 }
@@ -78,8 +85,6 @@ load_existing_allocation <- function(allo) {
     }
 }
 
-
-
 balance_so_far <- function(previous_allocation) {
     pa <- previous_allocation$single_allocation
     split <- table(t(pa[, -ncol(pa)]))
@@ -91,8 +96,7 @@ determine_clusters <- function(arms, clusters) {
     # uneven split.
 
     # Check that arguments are whole numbers
-    stopifnot(arms %% 1 == 0,
-              clusters %% 1 == 0)
+    stopifnot(arms %% 1 == 0, clusters %% 1 == 0)
 
     # Check that we have > 1 cluster
     stopifnot(clusters > 1)
@@ -105,13 +109,12 @@ determine_clusters <- function(arms, clusters) {
 }
 
 create_letter_matrix <- function(arms, clusters, per_cluster, half = TRUE) {
-    # stopifnot(clusters <= 24)
     # Create matrix with letters (one for each cluster) arranged into columns
     # (one for each arm)
     random <- t(combn(letters[1:clusters], per_cluster))
     if (half) {
         half <- nrow(random) / 2
-        random	<-	random[1:half, ]
+        random	<- random[1:half, ]
         return(random)
     } else {
         return(random)
@@ -137,9 +140,16 @@ create_binary_matrix <- function(arms, clusters, per_cluster) {
     return(selected_rows)
 }
 
+
+###############################################################################
+####                                                                      #####
+####                 Functions to carry out randomisation                 #####
+####                                                                      #####
+###############################################################################
+
 random_allocation <- function(covariates, clusters) {
     # Check that 'covariates' is, or can be converted to, a data frame.
-    if (is.tibble(covariates)) {
+    if (is_tibble(covariates)) {
         covariates <- as.data.frame(covariates)
     }
 
@@ -179,7 +189,7 @@ random_allocation <- function(covariates, clusters) {
     #  Sort the data ==========================================================
     balance <- balance[order(balance[,"balance"]), ]
 
-    # Decide how many rows to return ==========================================
+    # Decide how many rows to return (10% at present) =========================
     n <- round(quantile(1:nrow(balance), c(0.10)))
 
     if (clusters == 4) {
@@ -194,14 +204,13 @@ random_allocation <- function(covariates, clusters) {
 
     # Create A/B version of final allocation===================================
     # A = 0; B = 1.
-
     ab <- convert_to_ab(allocation)
 
     # Return the final allocation
     return(list(single_allocation = allocation,
-                single_ab = ab,
-                all_allocations = balance,
-                site_size = clusters))
+                single_ab         = ab,
+                all_allocations   = balance,
+                site_size         = clusters))
 }
 
 additional_allocation <- function(covariates, 
@@ -211,7 +220,7 @@ additional_allocation <- function(covariates,
                                   verbose = TRUE) {
 
     # Check that 'covariates' is, or can be converted to, a data frame.
-    if (is.tibble(covariates)) {
+    if (is_tibble(covariates)) {
         covariates <- as.data.frame(covariates)
     }
 
@@ -269,9 +278,7 @@ additional_allocation <- function(covariates,
     selected_covariates <- data.frame(covariates[rows, columns])
 
     # Calculate the standardized Z-scores
-    z_scores <- data.frame(scale(selected_covariates,
-                                center = TRUE, 
-                                scale = TRUE))
+    z_scores <- data.frame(scale(selected_covariates, center = TRUE, scale = TRUE)) 
 
     # Select required columns from previous allocation (i.e. remove 'balance')
     Z <- Z[,1:size_of_existing_allocation]
@@ -285,11 +292,9 @@ additional_allocation <- function(covariates,
 
     # Ensure that existing allocation is numeric (and not integer). This is 
     # required for the matrix multiplication.
-
     Z <- t(apply(Z, 2, as.numeric))
 
     # For the existing allocation (repeated down the columns)
-    
     first <- as.matrix(Z) %*% as.matrix(z_scores[1:ncol(Z),]) 
     from <- ncol(Z) + 1
     to <- ncol(Z) + clusters
@@ -341,7 +346,7 @@ additional_allocation <- function(covariates,
     # We will do this by changing one of the clusters (chosen at random) to be
     # '0' or '1', depending on the direction of the existing imbalance.
 
-    # By default this is disabled.
+    # This is disabled by default.
 
     balanced <- allocation
 
