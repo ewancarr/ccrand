@@ -1,4 +1,4 @@
-# R script to carry out covariate-constrained randomisation 
+# R implementation of covariate-constrained randomisation 
 
 *Ewan Carr*  
 *Department of Biostatistics and Health Informatics, King's College London*  
