@@ -1,3 +1,13 @@
+<style>
+div {
+  background-color: lightgrey;
+  width: 90%
+  border: 2px solid black;
+  padding: 10px;
+  margin: 0px;
+}
+</style>
+
 # R implementation of covariate-constrained randomisation 
 
 *Ewan Carr*  
@@ -9,12 +19,24 @@ as described in Carter and Hood (2008). It is intended for use in
 cluster-randomised trials where blocks of clusters (of varying size; 4, 6, 8)
 are allocated sequentially. Please see `example.R` for details.
 
-This work will be presented at the [Brighton Conference]
+This work will be presented at the [5th International Clinical Trials
+Methodology Conference](https://ictmc2019.com/) in Brighton, UK (6-9 October, 2019):
 
-> Abstract
-
+</center>
+<div>
+>**Covariate constrained block randomisation for a cluster randomised trial**  
+>*Kirsty James, Sabine Landau, Ewan Carr, Ben Carter (2019)*
+>
+>**Introduction**  Cluster randomised controlled trials require randomisation at the level of the cluster as opposed to the level of the participant. As there are fewer units being randomised than in an individually randomised trial the risk of baseline covariate imbalance is high. Standard methods of stratified randomisation can be employed but are limited to categorical covariates. In an ongoing trial we used stratified covariate constrained randomisation in order to accommodate continuous covariates.  
+>
+>**Methods**  Clusters were identified within catchment areas, 4-6 within each. We required balance in the trial arms for characteristics of the area's service user populations hence the randomisation was stratified by catchment area. In addition, we balanced trial arms for two continuous cluster level covariates; surgery quality and deprivation. The randomisation algorithm, adapted from the work of Carter and Hood, balanced trial arms within and across catchment areas for these two covariates.   
+>
+>**Results**  We randomised 28 clusters from 7 catchment areas (strata). All clusters within a stratum were supplied as a set over the course of the randomisation period. Every time the covariate information on clusters of a stratum became available the algorithm worked out all possible cluster assignments within the stratum and constructed a balancing index based on the clusters that have been randomised so far. An assignment is then chosen at random from the best performing allocations in terms of the balancing index to avoid the algorithm becoming deterministic.  
+>
+>**Discussion**  There were several added complexities in using this randomisation technique in terms of performing the allocations as it was a bespoke algorithm executed by the statisticians. This method does require all cluster information within a stratum to be provided at once which could be a limitation. Outside of this the algorithm allowed the flexibility that was required to balance on continuous covariates in a reliable way.
 
 ![](Poster)
+</div>
 
 # Don't use this software
 
