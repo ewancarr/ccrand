@@ -1,13 +1,3 @@
-<style>
-div {
-  background-color: lightgrey;
-  width: 90%
-  border: 2px solid black;
-  padding: 10px;
-  margin: 0px;
-}
-</style>
-
 # R implementation of covariate-constrained randomisation 
 
 *Ewan Carr*  
@@ -19,11 +9,10 @@ as described in Carter and Hood (2008). It is intended for use in
 cluster-randomised trials where blocks of clusters (of varying size; 4, 6, 8)
 are allocated sequentially. Please see `example.R` for details.
 
+***
 This work will be presented at the [5th International Clinical Trials
 Methodology Conference](https://ictmc2019.com/) in Brighton, UK (6-9 October, 2019):
 
-</center>
-<div>
 >**Covariate constrained block randomisation for a cluster randomised trial**  
 >*Kirsty James, Sabine Landau, Ewan Carr, Ben Carter (2019)*
 >
@@ -36,7 +25,8 @@ Methodology Conference](https://ictmc2019.com/) in Brighton, UK (6-9 October, 20
 >**Discussion**  There were several added complexities in using this randomisation technique in terms of performing the allocations as it was a bespoke algorithm executed by the statisticians. This method does require all cluster information within a stratum to be provided at once which could be a limitation. Outside of this the algorithm allowed the flexibility that was required to balance on continuous covariates in a reliable way.
 
 ![](Poster)
-</div>
+
+***
 
 # Don't use this software
 
