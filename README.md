@@ -24,8 +24,6 @@ Methodology Conference](https://ictmc2019.com/) in Brighton, UK (6-9 October, 20
 >
 >**Discussion**  There were several added complexities in using this randomisation technique in terms of performing the allocations as it was a bespoke algorithm executed by the statisticians. This method does require all cluster information within a stratum to be provided at once which could be a limitation. Outside of this the algorithm allowed the flexibility that was required to balance on continuous covariates in a reliable way.
 
-![](Poster)
-
 ***
 
 # Don't use this software
