@@ -38,10 +38,20 @@ covariate_filename <- function(allo) {
     paste0("covariates_allocation_", allo, ".xlsx")
 }
 
-generate_filename_datestamp <- function(allo) {
-    paste0(trialname, "_",
-           format(Sys.time(), "%Y_%m_%d_%H%M%S"),
-           "_allocation_", allo, ".Rdata")
+export_allocation <- function(trialname, allo, existing_allocation, covariates) {
+    fn <- paste0(trialname, "_",
+                 format(Sys.time(), "%Y_%m_%d_%H%M%S"),
+                 "_allocation_", allo, c(".Rdata", ".xlsx"))
+    # Export single allocation and covariates as Excel file
+    res <- gather(existing_allocation$single_ab, k, allo)
+    key = names(covariates)[1]
+    names(res)[1] <- key
+    write_xlsx(full_join(covariates, res, by = key),
+               path = here("saved_allocations", fn[2]))
+    cat("Saving: ", fn[1], "\n")
+    # Export allocations as RData object, for use in subsequent allocations
+    save(existing_allocation, file = here("saved_allocations", fn[1]))
+    cat("Saving: ", fn[2], "\n")
 }
 
 load_existing_allocation <- function(allo) {
