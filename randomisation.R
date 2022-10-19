@@ -1,9 +1,9 @@
 # ==============================================================================
-# Title:            This script calculates the balance statistic using the 
+# Title:            This script calculates the balance statistic using the
 #                   minimisation algorithm.
 # Author:           Ewan Carr; 2017-11-17
 # Original author:  Ben Carter; 2007-12-04
-            
+
 # CHANGES
 # Date	        Description
 # ------------  ---------------------------------------------------------------
@@ -15,15 +15,17 @@
 # 2017-11-28    Added option to return a single allocation, selected at random,
 #               set as default.
 # 2017-12-12    Revised script
-#                   - Now uses all possible allocations (i.e. including 
+#                   - Now uses all possible allocations (i.e. including
 #                     duplicates -- 0011 AND 1100).
-#                   - With 4 clusters, the first allocation will give 6 
+#                   - With 4 clusters, the first allocation will give 6
 #                     possible allocations with 3 unique balance statistic.
 #                     The function will return one of the top two allocations
 #                     at random (i.e. two allocations with identical balance).
 #               Simplified options. Now returns a list with "all_allocations"
 #               and the "single_allocation", selected at random.
 # 2019-09-5     Tidy up before distribution on GitHub.
+# 2022-10-19    Specify environment for "load" function to ensure previous
+#               allocations are correctly loaded.
 # =============================================================================
 
 trialname <- "TRIAL"
@@ -38,13 +40,16 @@ covariate_filename <- function(allo) {
     paste0("covariates_allocation_", allo, ".xlsx")
 }
 
-export_allocation <- function(trialname, allo, existing_allocation, covariates) {
+export_allocation <- function(trialname,
+                              allo,
+                              existing_allocation,
+                              covariates) {
     fn <- paste0(trialname, "_",
                  format(Sys.time(), "%Y_%m_%d_%H%M%S"),
                  "_allocation_", allo, c(".Rdata", ".xlsx"))
     # Export single allocation and covariates as Excel file
     res <- gather(existing_allocation$single_ab, k, allo)
-    key = names(covariates)[1]
+    key <- names(covariates)[1]
     names(res)[1] <- key
     write_xlsx(full_join(covariates, res, by = key),
                path = here("saved_allocations", fn[2]))
@@ -56,7 +61,7 @@ export_allocation <- function(trialname, allo, existing_allocation, covariates) 
 
 load_existing_allocation <- function(allo) {
     # allo = CURRENT allocation (i.e. 1, 2, 3...)
-    # Previous allocations should be stored in a folder 
+    # Previous allocations should be stored in a folder
     # "saved_allocations".
 
     # Check we're not on the first allocation.
@@ -88,7 +93,8 @@ load_existing_allocation <- function(allo) {
                                     "    ", matched_files,
                                     "\n"))
     if (ask_user == 1) {
-        load(here("saved_allocations", matched_files), 
+        load(here("saved_allocations", matched_files),
+             envir = .GlobalEnv,
              verbose = TRUE)
     } else {
         stop("Stopping, as requested.")
@@ -102,7 +108,7 @@ balance_so_far <- function(previous_allocation) {
 }
 
 determine_clusters <- function(arms, clusters) {
-    # This determines the number of clusters, correctly handling an 
+    # This determines the number of clusters, correctly handling an
     # uneven split.
 
     # Check that arguments are whole numbers
@@ -112,9 +118,9 @@ determine_clusters <- function(arms, clusters) {
     stopifnot(clusters > 1)
 
     # If so, calculate number of arms
-    return(ifelse(clusters %% arms == 0,        # If number of clusters is 
+    return(ifelse(clusters %% arms == 0,        # If number of clusters is
                                                 # divisible by number of arms
-                  clusters / arms,              
+                  clusters / arms,
                   clusters / arms + sample(c(0.5, -0.5), 1)))
 }
 
@@ -141,11 +147,11 @@ convert_to_ab <- function(allo) {
 
 create_binary_matrix <- function(arms, clusters, per_cluster) {
     # Create matrix of all permutations
-    all_perm <- expand.grid(rep(list(0:1), clusters)) 
+    all_perm <- expand.grid(rep(list(0:1), clusters))
     colnames(all_perm) <- letters[1:clusters]
 
     # Select rows that sum to number of clusters per arm
-    selected_rows <- all_perm[rowSums(all_perm) == per_cluster,]
+    selected_rows <- all_perm[rowSums(all_perm) == per_cluster, ]
 
     return(selected_rows)
 }
@@ -176,12 +182,12 @@ random_allocation <- function(covariates, clusters) {
 
     # Generate matrix of 0/1s =================================================
     rand <- create_binary_matrix(arms, clusters, per_cluster)
-    
+
     # Check that we have covariate information for each cluster ===============
     stopifnot(nrow(covariates) >= clusters)
 
     # Set row names
-    rownames(covariates) <- as.character(covariates[,1])
+    rownames(covariates) <- as.character(covariates[, 1])
 
     # Select first n (clusters) for practice
     covariates <- data.frame(covariates[1:clusters, ])
@@ -197,17 +203,17 @@ random_allocation <- function(covariates, clusters) {
     colnames(balance) <- c(rownames(covariates), "balance")
 
     #  Sort the data ==========================================================
-    balance <- balance[order(balance[,"balance"]), ]
+    balance <- balance[order(balance[, "balance"]), ]
 
     # Decide how many rows to return (10% at present) =========================
     n <- round(quantile(1:nrow(balance), c(0.10)))
 
     if (clusters == 4) {
-        # If using 4 clusters (6 possible allocations) pick at random one of the 
-        # top two best balanced allocations.
+        # If using 4 clusters (6 possible allocations) pick at random one of
+        # the top two best balanced allocations.
         allocation <- balance[sample(1:2, 1), ]
     } else {
-        # Otherwise, pick at random one allocation from the top 10% of possible 
+        # Otherwise, pick at random one allocation from the top 10% of possible
         # allocations (i.e. with best balance).
         allocation <- balance[sample(1:n, 1), ]
     }
@@ -223,7 +229,7 @@ random_allocation <- function(covariates, clusters) {
                 site_size         = clusters))
 }
 
-additional_allocation <- function(covariates, 
+additional_allocation <- function(covariates,
                                   previous_allocation,
                                   clusters,
                                   fix_balance = FALSE,
@@ -236,7 +242,7 @@ additional_allocation <- function(covariates,
 
     # Throw an error if covariates isn't a data frame
     stopifnot(is.data.frame(covariates))
-    arms <- 2 
+    arms <- 2
     Z <- previous_allocation$single_allocation
     size_of_existing_allocation <- ncol(Z) - 1
 
@@ -248,12 +254,12 @@ additional_allocation <- function(covariates,
     # Create required matrices ================================================
     per_cluster <- determine_clusters(arms, clusters)
     if (verbose) {
-        cat(paste0("\n", 
-                   "Number of clusters per arm:                          ", 
+        cat(paste0("\n",
+                   "Number of clusters per arm:                          ",
                    per_cluster, "\n"))
     }
 
-    random <- create_letter_matrix(arms, clusters, per_cluster) 
+    random <- create_letter_matrix(arms, clusters, per_cluster)
     rand <- create_binary_matrix(arms, clusters, per_cluster)
 
     # Prepare covariates ======================================================
@@ -261,7 +267,7 @@ additional_allocation <- function(covariates,
         cat(paste0("Cluster ID variable:                                 ", 
                    names(covariates)[1]))
         cat(paste0("\n", 
-                   "Balancing on the following variables:                ", 
+                   "Balancing on the following variables:                ",
                    paste(names(covariates)[-1], 
                          collapse = ", "),
                    "\n"))
@@ -269,18 +275,18 @@ additional_allocation <- function(covariates,
 
     # Check that we have enough covariates
     if (verbose) {
-        cat(paste0("Rows in covariates:                                  ", 
+        cat(paste0("Rows in covariates:                                  ",
                    nrow(covariates), "\n"))
-        cat(paste0("Number of clusters ALREADY allocated:                ", 
+        cat(paste0("Number of clusters ALREADY allocated:                ",
                    size_of_existing_allocation, "\n"))
-        cat(paste0("Number of clusters in the CURRENT allocation         ", 
+        cat(paste0("Number of clusters in the CURRENT allocation         ",
                    clusters, "\n"))
     }
 
     stopifnot(nrow(covariates) >= (size_of_existing_allocation + clusters))
 
     # Set rownames
-    rownames(covariates) <- as.character(covariates[,1])
+    rownames(covariates) <- as.character(covariates[, 1])
 
     # Select required rows/columns of covariate data frame
     rows <- 1:(clusters + size_of_existing_allocation)
@@ -288,10 +294,12 @@ additional_allocation <- function(covariates,
     selected_covariates <- data.frame(covariates[rows, columns])
 
     # Calculate the standardized Z-scores
-    z_scores <- data.frame(scale(selected_covariates, center = TRUE, scale = TRUE)) 
+    z_scores <- data.frame(scale(selected_covariates,
+                                 center = TRUE,
+                                 scale = TRUE))
 
     # Select required columns from previous allocation (i.e. remove 'balance')
-    Z <- Z[,1:size_of_existing_allocation]
+    Z <- Z[, 1:size_of_existing_allocation]
 
     # Set column names for randomisation matrix (for new allocation)
     from <- size_of_existing_allocation + 1
@@ -374,7 +382,9 @@ additional_allocation <- function(covariates,
         balanced$all_allocations[, chosen_zero] <- 1
 
     } else if (balance_so_far(balanced) <= -1) {
-        if (verbose) { cat("We have too many 0s, so replace one of the 1s.\n") }
+        if (verbose) { 
+          cat("We have too many 0s, so replace one of the 1s.\n") 
+        }
 
         # Pick one 1 column at random
         ones <- which(balanced$single_allocation == 1)
